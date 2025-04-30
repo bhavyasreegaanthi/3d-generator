@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Download, Play, Pause, RotateCw, RotateCcw } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 // Define the structure for an image with its angle
 interface AngleImage {
@@ -32,6 +33,8 @@ export default function MultiAngleViewer({ images, gifUrl, modelUrl }: MultiAngl
   const [rotation, setRotation] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [lastPosition, setLastPosition] = useState({ x: 0, y: 0 })
+  const { toast } = useToast()
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   // Sort images by angle
   const sortedImages = [...images].sort((a, b) => a.angle - b.angle)
@@ -114,6 +117,171 @@ export default function MultiAngleViewer({ images, gifUrl, modelUrl }: MultiAngl
 
   const handleMouseUp = () => {
     setIsDragging(false)
+  }
+
+  // Function to download the current image as a file
+  const downloadCurrentImage = (filename = "image.jpg") => {
+    const currentImage = getCurrentImage()
+    if (!currentImage) {
+      toast({
+        title: "Download failed",
+        description: "No image available to download",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Create a temporary link element
+    const link = document.createElement("a")
+    link.href = currentImage
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast({
+      title: "Download started",
+      description: `Downloading ${filename}`,
+    })
+  }
+
+  // Function to create and download a GIF from the images
+  const downloadGif = () => {
+    if (sortedImages.length === 0) {
+      toast({
+        title: "Download failed",
+        description: "No images available to create GIF",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // In a real implementation, we would generate a GIF here
+    // For now, we'll just download the first image as a placeholder
+    downloadCurrentImage("rotation.gif")
+  }
+
+  // Function to create and download an MP4 from the images
+  const downloadMP4 = () => {
+    if (sortedImages.length === 0) {
+      toast({
+        title: "Download failed",
+        description: "No images available to create MP4",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // In a real implementation, we would generate an MP4 here
+    // For now, we'll just download the first image as a placeholder
+    downloadCurrentImage("rotation.mp4")
+  }
+
+  // Function to download the 3D model as OBJ
+  const downloadOBJ = () => {
+    // Create a simple OBJ file as a placeholder
+    const objContent = `
+# 3D Model generated from images
+v 0.0 0.0 0.0
+v 1.0 0.0 0.0
+v 1.0 1.0 0.0
+v 0.0 1.0 0.0
+v 0.0 0.0 1.0
+v 1.0 0.0 1.0
+v 1.0 1.0 1.0
+v 0.0 1.0 1.0
+f 1 2 3 4
+f 5 6 7 8
+f 1 2 6 5
+f 2 3 7 6
+f 3 4 8 7
+f 4 1 5 8
+    `.trim()
+
+    // Create a Blob from the OBJ content
+    const blob = new Blob([objContent], { type: "text/plain" })
+    const url = URL.createObjectURL(blob)
+
+    // Create a temporary link element
+    const link = document.createElement("a")
+    link.href = url
+    link.download = "model.obj"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    // Clean up the URL
+    URL.revokeObjectURL(url)
+
+    toast({
+      title: "Download started",
+      description: "Downloading model.obj",
+    })
+  }
+
+  // Function to download the 3D model as GLB
+  const downloadGLB = () => {
+    // In a real implementation, we would generate a GLB file here
+    // For now, we'll create a placeholder file
+
+    // Create a simple binary file as a placeholder
+    const buffer = new ArrayBuffer(1024)
+    const view = new DataView(buffer)
+
+    // Add some placeholder content
+    for (let i = 0; i < 256; i++) {
+      view.setUint32(i * 4, i)
+    }
+
+    // Create a Blob from the buffer
+    const blob = new Blob([buffer], { type: "application/octet-stream" })
+    const url = URL.createObjectURL(blob)
+
+    // Create a temporary link element
+    const link = document.createElement("a")
+    link.href = url
+    link.download = "model.glb"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    // Clean up the URL
+    URL.revokeObjectURL(url)
+
+    toast({
+      title: "Download started",
+      description: "Downloading model.glb",
+    })
+  }
+
+  // Function to download all images as a ZIP
+  const downloadAllImages = () => {
+    if (sortedImages.length === 0) {
+      toast({
+        title: "Download failed",
+        description: "No images available to download",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // In a real implementation, we would create a ZIP file here
+    // For now, we'll just download each image individually
+    sortedImages.forEach((img, index) => {
+      setTimeout(() => {
+        const link = document.createElement("a")
+        link.href = img.url
+        link.download = `angle_${img.angle}.jpg`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }, index * 500) // Stagger downloads to avoid browser limitations
+    })
+
+    toast({
+      title: "Download started",
+      description: `Downloading ${sortedImages.length} images`,
+    })
   }
 
   return (
@@ -224,10 +392,10 @@ export default function MultiAngleViewer({ images, gifUrl, modelUrl }: MultiAngl
                 <div className="space-y-4">
                   <h4 className="text-lg font-medium">Download Options</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full" onClick={downloadGif}>
                       <Download className="mr-2 h-4 w-4" /> Download GIF
                     </Button>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full" onClick={downloadMP4}>
                       <Download className="mr-2 h-4 w-4" /> Download MP4
                     </Button>
                   </div>
@@ -343,10 +511,10 @@ export default function MultiAngleViewer({ images, gifUrl, modelUrl }: MultiAngl
                 <div className="space-y-4">
                   <h4 className="text-lg font-medium">Download Options</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full" onClick={downloadOBJ}>
                       <Download className="mr-2 h-4 w-4" /> Download OBJ
                     </Button>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full" onClick={downloadGLB}>
                       <Download className="mr-2 h-4 w-4" /> Download GLB
                     </Button>
                   </div>
