@@ -75,3 +75,7 @@
   }
 }
 
+/* Add this for 3D rotation */
+.backface-hidden {
+  backface-visibility: hidden;
+}

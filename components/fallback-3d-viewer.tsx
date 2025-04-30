@@ -88,4 +88,3 @@ export default function Fallback3DViewer({ imageUrl }) {
     </div>
   )
 }
-

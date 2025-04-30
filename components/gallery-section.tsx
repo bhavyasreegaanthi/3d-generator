@@ -221,4 +221,3 @@ function AnimationCard({ title, description, imageUrl, pythonCode }) {
     </div>
   )
 }
-

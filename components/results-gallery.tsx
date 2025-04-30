@@ -3,14 +3,34 @@ import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { Download, Play, Pause, AlertCircle } from "lucide-react"
+import { Download, Play, Pause, AlertCircle, RefreshCw } from "lucide-react"
 import MultiAxisRotation from "./multi-axis-rotation"
+import AnimatedGifDisplay from "./animated-gif-display"
+import { downloadDataUrl, downloadFilesAsZip } from "@/lib/image-processor"
 
 export default function ResultsGallery() {
   const [results, setResults] = useState(null)
   const [error, setError] = useState<string | null>(null)
+  const [isPlaying, setIsPlaying] = useState(true)
 
-  useEffect(() => {
+  // Function to create demo results
+  const createDemoResults = () => {
+    return {
+      gif: "/sample-images/cube.jpg",
+      mp4: "/sample-images/cube.jpg",
+      angles: Array.from({ length: 8 }, () => "/sample-images/cube.jpg"),
+      anglesZip: "#",
+      model: {
+        obj: "#",
+        mtl: "#",
+        texture: "#",
+      },
+      originalImage: "/sample-images/cube.jpg",
+    }
+  }
+
+  // Load results from localStorage or create demo data
+  const loadResults = () => {
     try {
       // Get the results from localStorage
       const storedResults = localStorage.getItem("processingResults")
@@ -23,25 +43,23 @@ export default function ResultsGallery() {
       } else {
         console.log("No results found in localStorage, creating demo data")
         // Create demo data if nothing is in localStorage
-        const demoResults = {
-          gif: "/placeholder.svg?height=400&width=600",
-          mp4: "/placeholder.svg?height=400&width=600",
-          angles: Array.from({ length: 8 }, (_, i) => "/placeholder.svg?height=200&width=200"),
-          anglesZip: "#",
-          model: {
-            obj: "#",
-            mtl: "#",
-            texture: "#",
-          },
-          originalImage: "/placeholder.svg?height=400&width=400",
-        }
-        setResults(demoResults)
+        setResults(createDemoResults())
       }
     } catch (error) {
       console.error("Error retrieving results:", error)
       setError("Failed to load results. Please try processing your image again.")
     }
+  }
+
+  // Load results on component mount
+  useEffect(() => {
+    loadResults()
   }, [])
+
+  // Function to reset to demo data
+  const resetToDemo = () => {
+    setResults(createDemoResults())
+  }
 
   if (error) {
     return (
@@ -53,6 +71,10 @@ export default function ResultsGallery() {
             <CardContent className="p-6 text-center py-20">
               <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
               <p className="text-red-400 font-medium text-lg">{error}</p>
+              <Button variant="outline" className="mt-6" onClick={resetToDemo}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Load Demo Data
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -69,6 +91,10 @@ export default function ResultsGallery() {
           <Card className="bg-slate-800 border-slate-700">
             <CardContent className="p-6 text-center py-20">
               <p className="text-slate-400">Upload an image to see your 3D rotating views here</p>
+              <Button variant="outline" className="mt-6" onClick={resetToDemo}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Load Demo Data
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -93,9 +119,11 @@ export default function ResultsGallery() {
               result={{
                 title: "360° Rotation",
                 description: "Complete 360-degree rotation around the vertical axis",
-                imageUrl: results.gif,
+                imageUrl: results.gif || results.originalImage,
                 videoUrl: results.mp4,
               }}
+              isPlaying={isPlaying}
+              setIsPlaying={setIsPlaying}
             />
           </TabsContent>
 
@@ -119,21 +147,13 @@ export default function ResultsGallery() {
   )
 }
 
-function GifResult({ result }) {
-  const [isPlaying, setIsPlaying] = useState(true)
-
+function GifResult({ result, isPlaying, setIsPlaying }) {
   return (
     <Card className="bg-slate-800 border-slate-700 overflow-hidden">
       <CardContent className="p-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="relative">
-            <div className="aspect-video bg-slate-900 flex items-center justify-center rounded-lg overflow-hidden">
-              <img
-                src={result.imageUrl || "/placeholder.svg?height=400&width=600"}
-                alt={result.title}
-                className="w-full h-full object-contain"
-              />
-            </div>
+          <div className="relative aspect-square bg-slate-900 rounded-lg overflow-hidden">
+            <AnimatedGifDisplay imageUrl={result.imageUrl} />
             <div className="absolute bottom-4 right-4 flex space-x-2">
               <Button
                 size="sm"
@@ -159,8 +179,7 @@ function GifResult({ result }) {
                   variant="outline"
                   className="w-full"
                   onClick={() => {
-                    // In a real implementation, this would download the actual file
-                    alert("In a production environment, this would download the GIF file")
+                    downloadDataUrl(result.imageUrl, "rotating-view.gif")
                   }}
                 >
                   <Download className="mr-2 h-4 w-4" /> Download GIF
@@ -169,8 +188,7 @@ function GifResult({ result }) {
                   variant="outline"
                   className="w-full"
                   onClick={() => {
-                    // In a real implementation, this would download the actual file
-                    alert("In a production environment, this would download the MP4 file")
+                    downloadDataUrl(result.videoUrl, "rotating-view.mp4")
                   }}
                 >
                   <Download className="mr-2 h-4 w-4" /> Download MP4
@@ -186,7 +204,7 @@ function GifResult({ result }) {
                     <span className="text-slate-400">Resolution:</span> 800 x 600 px
                   </li>
                   <li>
-                    <span className="text-slate-400">Frames:</span> 60
+                    <span className="text-slate-400">Frames:</span> 36
                   </li>
                   <li>
                     <span className="text-slate-400">File Size:</span> 2.4 MB
@@ -229,7 +247,7 @@ function MultiAngleResult({ result }) {
                     size="sm"
                     variant="ghost"
                     className="h-8 w-8 p-0"
-                    onClick={() => alert(`In a production environment, this would download image ${index + 1}`)}
+                    onClick={() => downloadDataUrl(image, `angle-${index * 45}.jpg`)}
                   >
                     <Download className="h-4 w-4" />
                   </Button>
@@ -244,7 +262,13 @@ function MultiAngleResult({ result }) {
           <div className="flex justify-center mt-6">
             <Button
               variant="outline"
-              onClick={() => alert("In a production environment, this would download all images as a ZIP file")}
+              onClick={() => {
+                const files = result.images.map((image, index) => ({
+                  data: image,
+                  name: `angle-${index * 45}.jpg`,
+                }))
+                downloadFilesAsZip(files)
+              }}
             >
               <Download className="mr-2 h-4 w-4" /> Download All Images (ZIP)
             </Button>
@@ -257,7 +281,7 @@ function MultiAngleResult({ result }) {
 
 function ModelResult({ imageUrl }) {
   // Ensure we have a valid image URL
-  const safeImageUrl = imageUrl || "/placeholder.svg?height=400&width=400"
+  const safeImageUrl = imageUrl || "/sample-images/cube.jpg"
 
   return (
     <Card className="bg-slate-800 border-slate-700 overflow-hidden">
@@ -305,4 +329,3 @@ function ModelResult({ imageUrl }) {
     </Card>
   )
 }
-

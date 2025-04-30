@@ -1,11 +1,11 @@
 "use client"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import type React from "react"
-
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Upload, ImageIcon, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import DirectImageViewer from "./direct-image-viewer"
 
 export default function ImageUploader() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
@@ -14,6 +14,7 @@ export default function ImageUploader() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
+  // Function to handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
@@ -44,6 +45,7 @@ export default function ImageUploader() {
     }
   }
 
+  // Function to handle image upload and processing
   const handleUpload = async () => {
     if (!selectedImage) {
       toast({
@@ -57,33 +59,33 @@ export default function ImageUploader() {
     setIsProcessing(true)
 
     try {
-      // Create a simple mock result with the actual preview URL
-      const mockResults = {
-        gif: previewUrl,
-        mp4: previewUrl,
-        angles: Array.from({ length: 8 }, () => previewUrl),
-        anglesZip: "#",
-        model: {
-          obj: "#",
-          mtl: "#",
-          texture: "#",
-        },
-        originalImage: previewUrl,
-      }
+      // Simulate processing delay
+      await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      // Store the results
-      localStorage.setItem("processingResults", JSON.stringify(mockResults))
+      // Update the DirectImageViewer component
+      const viewerElement = document.getElementById("direct-viewer")
+      if (viewerElement) {
+        // Clear previous content
+        viewerElement.innerHTML = ""
+
+        // Create and render the DirectImageViewer component
+        const viewer = document.createElement("div")
+        viewerElement.appendChild(viewer)
+
+        // Use React to render the component
+        const React = await import("react")
+        const ReactDOM = await import("react-dom/client")
+        const root = ReactDOM.createRoot(viewer)
+        root.render(React.createElement(DirectImageViewer, { imageUrl: previewUrl }))
+      }
 
       toast({
         title: "Processing complete!",
-        description: "Your 3D rotating views are ready",
+        description: "Your image is now being displayed in 3D rotation below",
       })
 
-      // Scroll to results section
-      const resultsElement = document.getElementById("results-gallery")
-      if (resultsElement) {
-        resultsElement.scrollIntoView({ behavior: "smooth" })
-      }
+      // Scroll to the viewer section
+      viewerElement?.scrollIntoView({ behavior: "smooth" })
     } catch (error) {
       console.error("Error processing image:", error)
       toast({
@@ -96,10 +98,12 @@ export default function ImageUploader() {
     }
   }
 
+  // Function to handle drag over event
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
   }
 
+  // Function to handle drop event
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
 
@@ -122,24 +126,26 @@ export default function ImageUploader() {
     }
   }
 
+  // Function to handle sample image selection
   const handleSampleImage = (imageUrl: string) => {
+    setPreviewUrl(imageUrl)
+
     // Create a mock file object
     fetch(imageUrl)
       .then((res) => res.blob())
       .then((blob) => {
         const file = new File([blob], "sample-image.jpg", { type: "image/jpeg" })
         setSelectedImage(file)
-        setPreviewUrl(imageUrl)
       })
       .catch((err) => {
         console.error("Error loading sample image:", err)
-        toast({
-          title: "Error loading sample image",
-          description: "Please try another image or upload your own.",
-          variant: "destructive",
-        })
       })
   }
+
+  // Load a default sample image on component mount
+  useEffect(() => {
+    handleSampleImage("/sample-images/cube.jpg")
+  }, [])
 
   return (
     <section id="image-uploader" className="py-20 px-4 md:px-6">
@@ -175,7 +181,7 @@ export default function ImageUploader() {
                   </div>
                   <p className="text-slate-300">
                     {selectedImage?.name || "Sample Image"}
-                    {selectedImage?.size ? `(${Math.round(selectedImage?.size / 1024)} KB)` : ""}
+                    {selectedImage?.size ? ` (${Math.round(selectedImage.size / 1024)} KB)` : ""}
                   </p>
                 </div>
               ) : (
@@ -216,10 +222,10 @@ export default function ImageUploader() {
                   </div>
                   <div
                     className="aspect-square bg-slate-900 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-purple-500"
-                    onClick={() => handleSampleImage("/placeholder.svg?height=400&width=400")}
+                    onClick={() => handleSampleImage("/placeholder.svg?height=400&width=400&text=Sphere")}
                   >
                     <img
-                      src="/placeholder.svg?height=400&width=400"
+                      src="/placeholder.svg?height=400&width=400&text=Sphere"
                       alt="Sample Sphere"
                       className="w-full h-full object-cover"
                     />
@@ -264,7 +270,7 @@ export default function ImageUploader() {
                   ) : (
                     <>
                       <Upload className="mr-2 h-4 w-4" />
-                      Generate 3D Rotating Views
+                      Generate 3D Rotation
                     </>
                   )}
                 </Button>

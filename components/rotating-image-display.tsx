@@ -78,4 +78,3 @@ export default function RotatingImageDisplay({ imageUrl }: { imageUrl: string })
     </div>
   )
 }
-

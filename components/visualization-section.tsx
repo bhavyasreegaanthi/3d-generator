@@ -153,4 +153,3 @@ function WavyFunction({ amplitude, frequency, showGrid, colorMap }) {
     </mesh>
   )
 }
-

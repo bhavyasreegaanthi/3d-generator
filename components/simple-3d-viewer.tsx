@@ -55,4 +55,3 @@ export default function Simple3DViewer({ imageUrl }) {
     </div>
   )
 }
-

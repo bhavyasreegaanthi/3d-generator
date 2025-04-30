@@ -124,4 +124,3 @@ export default function SimpleRotatingImage({ imageUrl }: { imageUrl: string }) 
     </div>
   )
 }
-
